@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>图片CORS错误检测器</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#3B82F6',
+                        success: '#10B981',
+                        danger: '#EF4444',
+                        neutral: '#64748B'
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', 'sans-serif'],
+                    },
+                }
+            }
+        }
+    </script>
+    <style type="text/tailwindcss">
+        @layer utilities {
+            .content-auto {
+                content-visibility: auto;
+            }
+            .card-shadow {
+                box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+            }
+        }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen font-sans">
+    <div class="container mx-auto px-4 py-12 max-w-4xl">
+        <header class="text-center mb-12">
+            <h1 class="text-[clamp(2rem,5vw,3rem)] font-bold text-gray-800 mb-4">
+                <i class="fa fa-picture-o text-primary mr-3"></i>图片CORS错误检测器
+            </h1>
+            <p class="text-gray-600 text-lg max-w-2xl mx-auto">
+                输入图片URL，检测该图片是否存在跨域资源共享(CORS)限制
+            </p>
+        </header>
+
+        <main class="bg-white rounded-xl p-6 md:p-8 card-shadow">
+            <div class="mb-8">
+                <label for="imageUrl" class="block text-sm font-medium text-gray-700 mb-2">图片URL</label>
+                <div class="flex flex-col sm:flex-row gap-3">
+                    <input 
+                        type="url" 
+                        id="imageUrl" 
+                        placeholder="例如: https://example.com/image.jpg"
+                        class="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary transition-all outline-none"
+                        value="https://picsum.photos/800/600"
+                    >
+                    <button 
+                        id="checkButton" 
+                        class="bg-primary hover:bg-primary/90 text-white font-medium px-6 py-3 rounded-lg transition-all flex items-center justify-center gap-2"
+                    >
+                        <i class="fa fa-search"></i>
+                        <span>检测CORS</span>
+                    </button>
+                </div>
+                <p class="text-xs text-gray-500 mt-2">提示: 可以尝试使用不同域的图片URL进行测试</p>
+            </div>
+
+            <div id="results" class="hidden mb-8">
+                <div id="loading" class="hidden flex items-center justify-center py-8 text-gray-500">
+                    <i class="fa fa-circle-o-notch fa-spin text-2xl mr-2"></i>
+                    <span>正在检测图片CORS状态...</span>
+                </div>
+
+                <div id="successResult" class="hidden p-4 bg-green-50 border border-green-200 rounded-lg mb-6">
+                    <div class="flex items-start">
+                        <div class="flex-shrink-0 pt-0.5">
+                            <i class="fa fa-check-circle text-success text-xl"></i>
+                        </div>
+                        <div class="ml-3">
+                            <h3 class="text-sm font-medium text-green-800">无CORS限制</h3>
+                            <div class="mt-2 text-sm text-green-700">
+                                <p>该图片可以跨域加载，没有CORS限制。</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="errorResult" class="hidden p-4 bg-red-50 border border-red-200 rounded-lg mb-6">
+                    <div class="flex items-start">
+                        <div class="flex-shrink-0 pt-0.5">
+                            <i class="fa fa-exclamation-circle text-danger text-xl"></i>
+                        </div>
+                        <div class="ml-3">
+                            <h3 class="text-sm font-medium text-red-800">存在CORS限制</h3>
+                            <div class="mt-2 text-sm text-red-700">
+                                <p>该图片有CORS限制，无法跨域加载。</p>
+                                <p id="errorDetails" class="mt-1 text-xs"></p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="imageContainer" class="hidden mb-6 border rounded-lg overflow-hidden bg-gray-100">
+                <h3 class="text-sm font-medium text-gray-700 p-3 bg-gray-50 border-b">图片预览 (如果允许加载)</h3>
+                <div class="flex items-center justify-center p-4 min-h-[200px]">
+                    <img id="previewImage" class="max-w-full max-h-[400px] object-contain" alt="图片预览">
+                </div>
+            </div>
+
+            <div class="bg-gray-50 p-4 rounded-lg">
+                <h3 class="text-sm font-medium text-gray-700 mb-2">什么是CORS错误？</h3>
+                <p class="text-sm text-gray-600 mb-2">
+                    CORS (跨域资源共享) 是一种安全特性，浏览器使用它来限制网页从不同域加载资源。
+                    如果图片所在的服务器没有正确配置CORS头，当从其他域的网页尝试加载该图片时，
+                    就会发生CORS错误。
+                </p>
+                <p class="text-sm text-gray-600">
+                    本工具通过尝试加载图片并检测是否触发CORS错误来判断图片是否受CORS限制。
+                </p>
+            </div>
+        </main>
+
+        <footer class="mt-12 text-center text-gray-500 text-sm">
+            <p>图片CORS错误检测器 &copy; 2023</p>
+        </footer>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const imageUrlInput = document.getElementById('imageUrl');
+            const checkButton = document.getElementById('checkButton');
+            const resultsDiv = document.getElementById('results');
+            const loadingDiv = document.getElementById('loading');
+            const successResult = document.getElementById('successResult');
+            const errorResult = document.getElementById('errorResult');
+            const errorDetails = document.getElementById('errorDetails');
+            const imageContainer = document.getElementById('imageContainer');
+            const previewImage = document.getElementById('previewImage');
+
+            // 检测CORS的函数
+            function checkImageCORS(url) {
+                // 显示加载状态
+                resultsDiv.classList.remove('hidden');
+                loadingDiv.classList.remove('hidden');
+                successResult.classList.add('hidden');
+                errorResult.classList.add('hidden');
+                imageContainer.classList.add('hidden');
+
+                // 创建一个新的Image对象
+                const img = new Image();
+                
+                // 处理图片加载成功的情况
+                img.onload = function() {
+                    loadingDiv.classList.add('hidden');
+                    successResult.classList.remove('hidden');
+                    
+                    // 显示图片预览
+                    previewImage.src = url;
+                    imageContainer.classList.remove('hidden');
+                };
+                
+                // 处理图片加载失败的情况
+                img.onerror = function(error) {
+                    loadingDiv.classList.add('hidden');
+                    errorResult.classList.remove('hidden');
+                    
+                    // 尝试确定错误原因
+                    if (error && error.message && error.message.includes('CORS')) {
+                        errorDetails.textContent = '错误详情: 检测到CORS限制，服务器不允许跨域访问此图片。';
+                    } else if (error && error.message) {
+                        errorDetails.textContent = `错误详情: ${error.message}`;
+                    } else {
+                        errorDetails.textContent = '错误详情: 图片加载失败，可能是由于CORS限制或其他原因。';
+                    }
+                    
+                    // 隐藏图片预览
+                    imageContainer.classList.add('hidden');
+                };
+                
+                // 关键：设置crossOrigin属性来触发CORS检查
+                img.crossOrigin = 'anonymous';
+                
+                // 设置图片URL开始加载
+                img.src = url + (url.includes('?') ? '&' : '?') + 't=' + new Date().getTime();
+            }
+
+            // 点击检测按钮时执行
+            checkButton.addEventListener('click', () => {
+                const url = imageUrlInput.value.trim();
+                if (url) {
+                    checkImageCORS(url);
+                } else {
+                    alert('请输入图片URL');
+                }
+            });
+
+            // 按Enter键时执行检测
+            imageUrlInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    checkButton.click();
+                }
+            });
+
+            // 初始检测示例图片
+            checkImageCORS(imageUrlInput.value.trim());
+        });
+    </script>
+</body>
+</html>
